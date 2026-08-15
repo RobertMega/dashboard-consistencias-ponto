@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm --prefix web ci",
+  "buildCommand": "npm --prefix web run build",
+  "functions": {
+    "api/parse.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{automation/tests/**,samples/**,references/**,data/**,exports/**,web/**}"
+    },
+    "api/export.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{automation/tests/**,samples/**,references/**,data/**,exports/**,web/**}"
+    }
+  }
+}

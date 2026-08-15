@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+enum ReportStatus {
+  SUCCESS
+  PROCESSING
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(VIEWER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ReportRun {
+  id             String       @id @default(cuid())
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  sourceFilename String
+  processedAt    DateTime?
+  status         ReportStatus
+  totalRecords   Int          @default(0)
+  errorMessage   String?
+  createdAt      DateTime     @default(now())
+  isCurrent      Boolean      @default(false)
+  excelFilename  String?
+  excelData      Bytes?
+  dailyRecords   DailyRecord[]
+
+  @@index([status, isCurrent])
+  @@index([periodStart, periodEnd])
+}
+
+model DailyRecord {
+  id              String     @id @default(cuid())
+  reportRunId     String
+  collaborator    String
+  date            DateTime
+  plannedHours    Int?
+  expectedMarkings Int?
+  markings        Json
+  markingsCount   Int
+  totalHours      Int?
+  balance         Int?
+  reason          String?
+  occurrenceType  String
+  severity        String
+  status          String
+  weekday         String?
+  calculatedBalance Int?
+  originalBalance Int?
+  createdAt       DateTime   @default(now())
+  reportRun       ReportRun  @relation(fields: [reportRunId], references: [id], onDelete: Cascade)
+
+  @@unique([reportRunId, collaborator, date])
+  @@index([reportRunId, date])
+  @@index([reportRunId, collaborator])
+  @@index([reportRunId, occurrenceType])
+  @@index([reportRunId, severity])
+  @@index([reportRunId, status])
+  @@index([reportRunId, collaborator, date])
+}

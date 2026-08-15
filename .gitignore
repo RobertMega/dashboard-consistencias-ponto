@@ -1,0 +1,39 @@
+# Environment
+.env
+.env.local
+.env.*
+!.env.example
+
+# Node
+node_modules/
+.next/
+out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Vercel
+.vercel/
+
+# Dados reais
+data/
+downloads/
+exports/
+web/public/dashboard-data.json
+
+# PDFs futuros de produção
+automation/download/*.pdf
+automation/download/*.xlsx
+automation/download/*.json
+*.pdf
+!samples/jornada-exemplo.pdf
+*.xlsx
+data/**/*.json
+data/**/*.csv
+
+# Sistema
+.DS_Store
+Thumbs.db
