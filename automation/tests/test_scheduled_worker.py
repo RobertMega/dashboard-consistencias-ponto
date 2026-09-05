@@ -73,16 +73,19 @@ def test_worker_assigns_a_timeout_to_each_job(tmp_path):
     assert [job.timeout_seconds for job in scheduled_jobs(config(tmp_path))] == [600, 600, 600]
 
 
-def test_windows_schedule_runs_at_eight_and_fifteen_without_legacy_tasks():
+def test_windows_schedule_registers_only_nine_without_old_times():
     script = Path(__file__).parents[1] / "run_scheduled.ps1"
     content = script.read_text(encoding="utf-8")
 
-    assert 'Dashboard-Consistencias-Ponto-0800' in content
-    assert 'Dashboard-Consistencias-Ponto-1500' in content
-    assert '@{ Name = "Dashboard-Consistencias-Ponto-0800"; Time = "08:00" }' in content
-    assert '@{ Name = "Dashboard-Consistencias-Ponto-1500"; Time = "15:00" }' in content
+    assert '@{ Name = "Dashboard-Consistencias-Ponto-0900"; Time = "09:00" }' in content
+    assert '@{ Name = "Dashboard-Consistencias-Ponto-0800"; Time = "08:00" }' not in content
+    assert '@{ Name = "Dashboard-Consistencias-Ponto-1500"; Time = "15:00" }' not in content
     assert 'Dashboard-Consistencias-Ponto-0600' in content
+    assert 'Dashboard-Consistencias-Ponto-0800' in content
     assert 'Dashboard-Consistencias-Ponto-1400' in content
+    assert 'Dashboard-Consistencias-Ponto-1500' in content
+    assert 'Dashboard-Consistencias-Ponto-0900' in content
+    assert 'ExecutionTimeLimit (New-TimeSpan -Minutes 30)' in content
     assert 'Unregister-ScheduledTask' in content
     assert '-Password $taskPassword' in content
     assert 'Get-Credential' in content
