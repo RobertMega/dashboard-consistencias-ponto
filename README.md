@@ -1,39 +1,53 @@
 # Dashboard de Consistências de Ponto
 
 Aplicação para processar o relatório PDF de Jornada, classificar ocorrências,
-gerar Excel e exibir um dashboard gerencial privado.
+gerar as bases de inconsistências, faltas e atrasos e exibir um dashboard
+gerencial privado.
 
-## Estado atual
+## Fluxo automático
 
-- Parser Python e regras de negócio validados.
-- PostgreSQL privado via Prisma.
-- Login com papéis `ADMIN` e `VIEWER`.
-- Upload manual de PDF somente para ADMIN.
-- Dashboard servido por API autenticada e paginada.
-- Histórico de processamentos e download protegido do Excel.
-- Playwright, login/download automático do Ponto VR, D-1, GitHub Actions e
-  Vercel ainda não foram implementados.
+O worker Windows acessa o link configurado do Ponto VR com `PONTO_CPF` e
+`PONTO_PASSWORD`, seleciona o período D-1 e baixa, nesta ordem, os relatórios:
+
+| Base | Tipo | Modelo | Formato | Endpoint |
+|---|---|---|---|---|
+| Inconsistência | Jornada (espelho ponto) | ROBERT - DASHBOARD | PDF | `/api/automation/report` |
+| Falta | Faltas | ROBERT - PAINEL GERENCIAL | XLS/XLSX | `/api/automation/absence` |
+| Atraso | Atrasos | ROBERT - DASHBOARD | XLS/XLSX | `/api/automation/delay` |
+
+As três bases são processadas sequencialmente às 09:00, com timeout individual
+de 600 segundos por padrão. Se uma falhar, as seguintes continuam; o resumo
+registra o resultado de cada base. Os botões de atualização manual permanecem
+disponíveis no dashboard.
 
 ## Desenvolvimento local
 
 Consulte [docs/PRODUCAO_LOCAL.md](docs/PRODUCAO_LOCAL.md) para configurar
-PostgreSQL, `.env.local`, migration, ADMIN inicial, login e upload manual.
-
-O fluxo local é:
+PostgreSQL, `.env.local`, migration, Google, login e upload manual. O fluxo é:
 
 ```text
-PDF -> parser/regras Python -> PostgreSQL privado -> API autenticada -> Next.js
+Ponto VR -> worker D-1 -> APIs protegidas -> parser/regras -> PostgreSQL -> dashboard
 ```
 
-Não gere dados reais em `web/public`. O logo institucional é o único asset
-relacionado ao dashboard que deve permanecer público.
-
-## Testes
+Instale as dependências do worker e o navegador:
 
 ```powershell
-pytest automation/tests
-Set-Location web
-npm run test:filters
-npm run lint
-npm run build
+python -m pip install -r automation/requirements.txt
+python -m playwright install chromium
 ```
+
+Depois configure as variáveis do usuário Windows usando
+[docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md) e valide sem acessar o
+portal:
+
+```powershell
+python -m automation.run_scheduled --dry-run
+```
+
+Para registrar o único agendamento diário às 09:00:
+
+```powershell
+.\automation\run_scheduled.ps1
+```
+
+Nunca versionar CPF, senha, tokens, cookies, PDFs reais ou planilhas reais.

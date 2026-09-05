@@ -4,22 +4,27 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "next lint",
-    "test:filters": "node --experimental-strip-types --test lib/dashboardFilters.test.ts lib/managerialMetrics.test.ts lib/securityRules.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:filters": "node --experimental-strip-types --test middleware.test.ts lib/dashboardFilters.test.ts lib/managerialMetrics.test.ts lib/securityRules.test.ts lib/googleAuth.test.ts lib/reportStatus.test.ts lib/processUpload.test.ts lib/absenceParserService.test.ts lib/reportProcessing.test.ts lib/reportBlobProcessing.test.ts lib/reportUpload.test.ts lib/reportUploadRoute.test.ts lib/reportQueue.test.ts lib/reportWorkflow.test.ts lib/reportPersistence.test.ts lib/reportRunState.test.ts lib/dashboardApi.test.ts lib/dailyPunches.test.ts lib/dashboardCharts.test.ts lib/delayReport.test.ts lib/delayMetrics.test.ts lib/delayStore.test.ts lib/delayImportRules.test.ts lib/uploadResponse.test.ts lib/faltaMetrics.test.ts lib/faltaStore.test.ts lib/automatedImport.test.ts components/Dashboard.table.test.ts components/DelayDashboard.test.ts components/FaltaDashboard.test.ts",
     "db:generate": "node --env-file=.env.local ./node_modules/prisma/build/index.js generate",
     "db:migrate": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate dev",
     "db:deploy": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate deploy",
-    "db:seed-admin": "node --env-file=.env.local scripts/create-admin.mjs"
+    "db:import-delay": "node --env-file=.env.local --experimental-strip-types scripts/import-delay.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@vercel/blob": "^2.3.0",
+    "@workflow/next": "4.1.9",
     "bcryptjs": "^3.0.3",
+    "google-auth-library": "^11.0.2",
     "jose": "^6.2.8",
     "next": "^14.2.0",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "workflow": "^4.2.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
