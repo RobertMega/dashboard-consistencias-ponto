@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -162,14 +163,15 @@ def _fill_first(page, selectors: tuple[str, ...], value: str, label: str, wait_m
 
 def _click_first(page, selectors: tuple[str, ...], code: str, description: str, timeout_ms: int = 2_000) -> None:
     for selector in selectors:
-        locator = page.locator(selector).first
-        try:
-            locator.wait_for(state="visible", timeout=timeout_ms)
-        except Exception:
-            continue
-        if locator.count() > 0:
-            locator.click()
-            return
+        controls = page.locator(selector)
+        for index in range(controls.count()):
+            locator = controls.nth(index)
+            try:
+                locator.wait_for(state="visible", timeout=timeout_ms)
+                locator.click()
+                return
+            except Exception:
+                continue
     raise PontoDownloadError(code, f"Controle de {description} não encontrado.")
 
 
@@ -189,12 +191,22 @@ def _normalized_text(value: str) -> str:
     return " ".join(value.split()).strip()
 
 
-def _select_option(page, selectors: tuple[str, ...], option: str, description: str, last: bool = False, timeout_ms: int = 8_000) -> None:
+def _select_option(page, selectors: tuple[str, ...], option: str, description: str, last: bool = False, occurrence: int | None = None, minimum_count: int | None = None, timeout_ms: int = 8_000) -> None:
     for selector in selectors:
+        deadline = time.monotonic() + timeout_ms / 1000
         controls = page.locator(selector)
-        if controls.count() == 0:
+        required_count = minimum_count or (occurrence + 1 if occurrence is not None else 1)
+        while controls.count() < required_count and time.monotonic() < deadline:
+            page.wait_for_timeout(100)
+            controls = page.locator(selector)
+        if controls.count() < required_count:
             continue
-        control = controls.last if last else controls.first
+        if occurrence is not None:
+            if controls.count() <= occurrence:
+                continue
+            control = controls.nth(occurrence)
+        else:
+            control = controls.last if last else controls.first
         try:
             control.wait_for(state="visible", timeout=timeout_ms)
             control.click()
@@ -332,7 +344,8 @@ def download_report_file(config: PontoConfig, report_date: date, definition: Pon
                 page.goto(config.report_url, wait_until="domcontentloaded")
                 _wait_for_visible(page, config.selectors.report_type, "REPORT_FORM_FAILED", "formulário do relatório", config.timeout_ms)
                 _select_option(page, config.selectors.report_type, definition.report_type, "tipo do relatório", timeout_ms=config.timeout_ms)
-                _select_option(page, config.selectors.report_model, definition.report_model, "modelo do relatório", last=True, timeout_ms=config.timeout_ms)
+                model_minimum_count = 4 if config.selectors.report_model == ("ng-select.pm-select",) else None
+                _select_option(page, config.selectors.report_model, definition.report_model, "modelo do relatório", occurrence=3, minimum_count=model_minimum_count, timeout_ms=config.timeout_ms)
                 _set_report_date(page, config.selectors.date_range, report_date, config.timeout_ms)
                 try:
                     with page.expect_response(lambda response: response.request.method == "POST" and "/html_reports/" in response.url, timeout=config.timeout_ms):

@@ -11,6 +11,8 @@ from automation.download.ponto_vr import (
     PontoConfig,
     PontoDownloadError,
     _fill_first,
+    _click_first,
+    _select_option,
     _wait_for_authenticated_redirect,
     download_report,
     login_succeeded,
@@ -58,6 +60,36 @@ def test_login_field_waits_for_spa_form_to_render():
     assert calls[1] == {"fill": "secret"}
 
 
+def test_click_first_skips_hidden_duplicate_controls():
+    clicked = []
+
+    class Control:
+        def __init__(self, index):
+            self.index = index
+
+        def wait_for(self, **kwargs):
+            if self.index == 0:
+                raise RuntimeError("hidden")
+
+        def click(self):
+            clicked.append(self.index)
+
+    class Controls:
+        def count(self):
+            return 2
+
+        def nth(self, index):
+            return Control(index)
+
+    class Page:
+        def locator(self, _selector):
+            return Controls()
+
+    _click_first(Page(), ("a:has-text('XLS')",), "REPORT_NOT_FOUND", "download", timeout_ms=100)
+
+    assert clicked == [1]
+
+
 def test_default_login_selector_matches_current_username_placeholder():
     assert "Nome de usuário" in PontoSelectors().cpf[0]
 
@@ -85,8 +117,61 @@ def test_default_report_form_targets_current_pontomais_controls():
     assert selectors.date_range[0] == "input[bsdaterangepicker]"
     assert selectors.report_type[0] == "ng-select.pm-select"
     assert selectors.download_pdf[0] == "a#relatorios-baixar-pdf"
+    assert "a:text-is(\"XLS\")" in selectors.download_excel
     assert DEFAULT_REPORT_TYPE == "Jornada (espelho ponto)"
     assert DEFAULT_REPORT_MODEL == "ROBERT - DASHBOARD"
+
+
+def test_report_model_uses_the_dynamic_model_select_not_the_grouping_select():
+    selected = []
+
+    class Option:
+        def __init__(self, text):
+            self.text = text
+
+        def inner_text(self):
+            return self.text
+
+        def click(self):
+            selected.append(self.text)
+
+    class Control:
+        def __init__(self, index):
+            self.index = index
+
+        def wait_for(self, **kwargs):
+            return None
+
+        def click(self):
+            selected.append(f"control:{self.index}")
+
+    class Controls:
+        def __init__(self):
+            self.items = [Control(0), Control(1), Control(2), Control(3)]
+
+        def count(self):
+            return len(self.items)
+
+        def nth(self, index):
+            return self.items[index]
+
+        @property
+        def first(self):
+            return self.items[0]
+
+        @property
+        def last(self):
+            return self.items[-1]
+
+    class Page:
+        def locator(self, selector):
+            if selector == "ng-select.pm-select":
+                return Controls()
+            return type("Options", (), {"count": lambda self: 1, "nth": lambda self, _index: Option("ROBERT - DASHBOARD")})()
+
+    _select_option(Page(), ("ng-select.pm-select",), "ROBERT - DASHBOARD", "modelo", occurrence=3, minimum_count=4)
+
+    assert selected == ["control:3", "ROBERT - DASHBOARD"]
 
 
 def test_config_reads_report_model_and_form_selector_overrides():

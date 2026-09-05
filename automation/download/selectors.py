@@ -22,7 +22,7 @@ class PontoSelectors:
     generate: tuple[str, ...] = ('button.pm-primary', 'button:has-text("Gerar relatório")')
     download: tuple[str, ...] = ('button:has-text("Baixar")', 'button:has-text("Exportar")')
     download_pdf: tuple[str, ...] = ('a#relatorios-baixar-pdf', 'a:has-text("PDF")')
-    download_excel: tuple[str, ...] = ('a#relatorios-baixar-excel', 'a:has-text("Excel")', 'a:has-text("XLS")')
+    download_excel: tuple[str, ...] = ('a#relatorios-baixar-excel', 'a:text-is("Excel")', 'a:text-is("XLS")', 'a:has-text("Excel")', 'a:has-text("XLS")')
 
     @classmethod
     def from_env(cls) -> "PontoSelectors":
